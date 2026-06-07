@@ -1,0 +1,63 @@
+name: Merge Back
+
+on:
+  workflow_call:
+    inputs:
+      base-branch:
+        description: Branch to merge into
+        type: string
+        default: develop
+      head-branch:
+        description: Branch to merge from
+        type: string
+        default: main
+      pr-title:
+        description: Pull request title
+        type: string
+        default: chore: sync develop with main
+      pr-body:
+        description: Pull request body
+        type: string
+        default: Automated merge-back after push to main.
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+      pull-requests: write
+    concurrency:
+      group: merge-back-${{ github.repository }}-${{ inputs.base-branch }}
+      cancel-in-progress: false
+
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Sync ${{ inputs.head-branch }} into ${{ inputs.base-branch }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if git merge-base --is-ancestor "origin/${{ inputs.head-branch }}" "origin/${{ inputs.base-branch }}"; then
+            echo "${{ inputs.base-branch }} already up to date with ${{ inputs.head-branch }}"
+            exit 0
+          fi
+
+          if gh pr list \
+            --base "${{ inputs.base-branch }}" \
+            --head "${{ inputs.head-branch }}" \
+            --state open \
+            --json number -q '.[0].number' | grep -q .; then
+            echo "PR already exists"
+            exit 0
+          fi
+
+          PR=$(gh pr create \
+            --base "${{ inputs.base-branch }}" \
+            --head "${{ inputs.head-branch }}" \
+            --title "${{ inputs.pr-title }}" \
+            --body "${{ inputs.pr-body }}")
+
+          gh pr merge "$PR" --auto --merge
