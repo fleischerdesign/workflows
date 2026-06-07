@@ -14,11 +14,11 @@ on:
       pr-title:
         description: Pull request title
         type: string
-        default: chore: sync develop with main
+        default: "chore: sync develop with main"
       pr-body:
         description: Pull request body
         type: string
-        default: Automated merge-back after push to main.
+        default: "Automated merge-back after push to main."
 
 jobs:
   sync:
