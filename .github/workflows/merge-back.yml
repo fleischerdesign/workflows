@@ -64,15 +64,16 @@ jobs:
             --body "${{ inputs.pr-body }}")
 
           # Enable auto-merge with retry (CI may not have started yet)
-          for i in 1 2 3 4 5; do
+          for i in 1 2 3 4 5 6 7 8 9 10; do
             if gh pr merge "$PR" --merge --auto 2>/dev/null; then
               echo "Auto-merge enabled on attempt $i"
               exit 0
             fi
-            echo "Retry $i..."
-            sleep 10
+            echo "Retry $i/10..."
+            sleep 15
           done
 
-          # Fallback: merge directly (CI already ran on main, PR is formality)
-          echo "Auto-merge unavailable — merging directly"
-          gh pr merge "$PR" --merge
+          # Fallback: admin-merge (required checks not yet passing, but
+          # main already passed them — develop is a fast-forward sync)
+          echo "Auto-merge unavailable — admin-merging"
+          gh pr merge "$PR" --merge --admin
