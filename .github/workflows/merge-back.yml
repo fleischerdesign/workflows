@@ -11,14 +11,6 @@ on:
         description: Branch to merge from
         type: string
         default: main
-      pr-title:
-        description: Pull request title
-        type: string
-        default: "chore: sync develop with main"
-      pr-body:
-        description: Pull request body
-        type: string
-        default: "Automated merge-back after push to main."
 
 jobs:
   sync:
@@ -26,7 +18,6 @@ jobs:
     timeout-minutes: 5
     permissions:
       contents: write
-      pull-requests: write
     concurrency:
       group: merge-back-${{ github.repository }}-${{ inputs.base-branch }}
       cancel-in-progress: false
@@ -36,28 +27,16 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Sync ${{ inputs.head-branch }} into ${{ inputs.base-branch }}
-        env:
-          GH_TOKEN: ${{ github.token }}
+      - name: Sync ${{ inputs.base-branch }} with ${{ inputs.head-branch }}
         run: |
           if git merge-base --is-ancestor "origin/${{ inputs.head-branch }}" "origin/${{ inputs.base-branch }}"; then
             echo "${{ inputs.base-branch }} already up to date with ${{ inputs.head-branch }}"
             exit 0
           fi
 
-          if gh pr list \
-            --base "${{ inputs.base-branch }}" \
-            --head "${{ inputs.head-branch }}" \
-            --state open \
-            --json number -q '.[0].number' | grep -q .; then
-            echo "PR already exists"
-            exit 0
-          fi
-
-          PR=$(gh pr create \
-            --base "${{ inputs.base-branch }}" \
-            --head "${{ inputs.head-branch }}" \
-            --title "${{ inputs.pr-title }}" \
-            --body "${{ inputs.pr-body }}")
-
-          gh pr merge "$PR" --auto --merge
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git checkout "${{ inputs.base-branch }}"
+          git merge "origin/${{ inputs.head-branch }}" --no-ff \
+            -m "chore: merge-back ${{ inputs.head-branch }} into ${{ inputs.base-branch }} [skip ci]"
+          git push origin "${{ inputs.base-branch }}"
