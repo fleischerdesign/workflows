@@ -39,7 +39,8 @@ jobs:
           fi
 
           echo "Testing nix build for hash mismatch..."
-          BUILD_OUT=$(nix build .#default 2>&1) || true
+          nix build .#default > /tmp/nix-build.log 2>&1 || true
+          BUILD_OUT=$(cat /tmp/nix-build.log)
 
           NEW_HASH=$(echo "$BUILD_OUT" | grep -oP "got:\s+\Ksha256-\S+")
           if [ -z "$NEW_HASH" ]; then
@@ -56,7 +57,7 @@ jobs:
           BRANCH="fix/npm-deps-hash-$(date +%s)"
           git checkout -b "$BRANCH"
           git add flake.nix
-          git commit -m "chore(nix): update npmDepsHash [skip ci]"
+          git commit -m "chore(nix): update npmDepsHash [skip ci]" --no-verify
           git push origin "$BRANCH"
 
           PR=$(gh pr create \

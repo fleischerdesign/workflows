@@ -61,7 +61,7 @@ jobs:
           BRANCH="fix/cargo-lock-$(date +%s)"
           git checkout -b "$BRANCH"
           git add Cargo.lock
-          git commit -m "chore: update Cargo.lock [skip ci]"
+          git commit -m "chore: update Cargo.lock [skip ci]" --no-verify
           git push origin "$BRANCH"
 
           PR=$(gh pr create \
