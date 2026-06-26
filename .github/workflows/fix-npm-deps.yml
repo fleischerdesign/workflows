@@ -28,9 +28,6 @@ jobs:
       - name: Install Nix
         uses: DeterminateSystems/nix-installer-action@v22
 
-      - name: Magic Nix Cache
-        uses: DeterminateSystems/magic-nix-cache-action@v14
-
       - name: Check and fix npmDepsHash
         env:
           GH_TOKEN: ${{ secrets.BOT_TOKEN }}
