@@ -44,7 +44,7 @@ jobs:
           nix build .#default > /tmp/nix-build.log 2>&1 || true
           BUILD_OUT=$(cat /tmp/nix-build.log)
 
-          NEW_HASH=$(echo "$BUILD_OUT" | grep -oP "got:\s+\Ksha256-\S+")
+          NEW_HASH=$(echo "$BUILD_OUT" | grep -oP "got:\s+\Ksha256-\S+" || true)
           if [ -z "$NEW_HASH" ]; then
             echo "npmDepsHash is up to date"
             exit 0
