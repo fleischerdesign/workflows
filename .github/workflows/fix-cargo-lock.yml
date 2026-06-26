@@ -24,6 +24,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v6
+        with:
+          token: ${{ secrets.BOT_TOKEN }}
 
       - name: Install Nix
         uses: DeterminateSystems/nix-installer-action@v22
