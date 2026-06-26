@@ -1,0 +1,71 @@
+name: Fix npmDepsHash
+
+on:
+  workflow_call:
+    secrets:
+      BOT_TOKEN:
+        required: true
+    inputs:
+      base-branch:
+        description: Branch to target with the fix PR
+        type: string
+        default: develop
+
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+      pull-requests: write
+    concurrency:
+      group: fix-npm-deps-${{ github.repository }}
+      cancel-in-progress: true
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install Nix
+        uses: DeterminateSystems/nix-installer-action@v22
+
+      - name: Magic Nix Cache
+        uses: DeterminateSystems/magic-nix-cache-action@v14
+
+      - name: Check and fix npmDepsHash
+        env:
+          GH_TOKEN: ${{ secrets.BOT_TOKEN }}
+        run: |
+          # Only relevant for repos using buildNpmPackage
+          if [ ! -f flake.nix ] || ! grep -q 'npmDepsHash' flake.nix; then
+            echo "No npmDepsHash found — skipping"
+            exit 0
+          fi
+
+          echo "Testing nix build for hash mismatch..."
+          BUILD_OUT=$(nix build .#default 2>&1) || true
+
+          NEW_HASH=$(echo "$BUILD_OUT" | grep -oP "got:\s+\Ksha256-\S+")
+          if [ -z "$NEW_HASH" ]; then
+            echo "npmDepsHash is up to date"
+            exit 0
+          fi
+
+          echo "npmDepsHash is stale. Fixing: $NEW_HASH"
+          sed -i "s|npmDepsHash = \".*\"|npmDepsHash = \"$NEW_HASH\"|" flake.nix
+
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          BRANCH="fix/npm-deps-hash-$(date +%s)"
+          git checkout -b "$BRANCH"
+          git add flake.nix
+          git commit -m "chore(nix): update npmDepsHash [skip ci]"
+          git push origin "$BRANCH"
+
+          PR=$(gh pr create \
+            --base "${{ inputs.base-branch }}" \
+            --head "$BRANCH" \
+            --title "chore(nix): update npmDepsHash" \
+            --body "Auto-fixed stale npmDepsHash after dependency update.")
+
+          gh pr merge "$PR" --merge --admin
