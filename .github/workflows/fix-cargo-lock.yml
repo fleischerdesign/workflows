@@ -1,0 +1,73 @@
+name: Fix Cargo.lock
+
+on:
+  workflow_call:
+    secrets:
+      BOT_TOKEN:
+        required: true
+    inputs:
+      base-branch:
+        description: Branch to target with the fix PR
+        type: string
+        default: develop
+
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+      pull-requests: write
+    concurrency:
+      group: fix-cargo-lock-${{ github.repository }}
+      cancel-in-progress: true
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install Nix
+        uses: DeterminateSystems/nix-installer-action@v22
+
+      - name: Cache Cargo Registry & Target
+        uses: actions/cache@v5
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target/
+          key: cargo-${{ runner.os }}-${{ hashFiles('Cargo.lock') }}
+          restore-keys: cargo-${{ runner.os }}-
+
+      - name: Fix Cargo.lock
+        env:
+          GH_TOKEN: ${{ secrets.BOT_TOKEN }}
+        run: |
+          if [ ! -f Cargo.lock ]; then
+            echo "No Cargo.lock — skipping"
+            exit 0
+          fi
+
+          nix develop --command cargo update --workspace 2>/dev/null || cargo update --workspace
+
+          if git diff --quiet Cargo.lock; then
+            echo "Cargo.lock is up to date"
+            exit 0
+          fi
+
+          echo "Cargo.lock is stale — fixing"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          BRANCH="fix/cargo-lock-$(date +%s)"
+          git checkout -b "$BRANCH"
+          git add Cargo.lock
+          git commit -m "chore: update Cargo.lock [skip ci]"
+          git push origin "$BRANCH"
+
+          PR=$(gh pr create \
+            --base "${{ inputs.base-branch }}" \
+            --head "$BRANCH" \
+            --title "chore: update Cargo.lock" \
+            --body "Auto-fixed stale Cargo.lock after dependency or version bump.")
+
+          gh pr merge "$PR" --merge --admin
