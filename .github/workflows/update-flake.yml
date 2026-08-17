@@ -13,8 +13,12 @@ on:
         default: |
           dependencies
           nix
+      base:
+        description: Target base branch for the pull request
+        type: string
+        required: false
       target-branch:
-        description: Target branch for the pull request
+        description: Deprecated alias for base branch
         type: string
         required: false
 
@@ -37,4 +41,4 @@ jobs:
         with:
           pr-title: ${{ inputs.pr-title }}
           pr-labels: ${{ inputs.pr-labels }}
-          target-branch: ${{ inputs.target-branch }}
+          base: ${{ inputs.base || inputs.target-branch || '' }}
