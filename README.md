@@ -45,3 +45,32 @@ jobs:
       head-branch: develop
     secrets: inherit
 ```
+
+### update-flake
+
+Automates periodic updates of `flake.lock` using DeterminateSystems installer and update-flake-lock action.
+
+**Inputs**
+
+| Input | Default | Description |
+|-------|---------|-------------|
+| `pr-title` | `chore(nix): update flake.lock` | Pull request title |
+| `pr-labels` | `dependencies\nnix` | Pull request labels |
+| `target-branch` | *(optional)* | Branch to target for the PR |
+
+**Usage**
+
+```yaml
+name: Update Flake Lock
+
+on:
+  schedule:
+    - cron: '0 0 * * 1'
+  workflow_dispatch:
+
+jobs:
+  update-flake:
+    uses: fleischerdesign/workflows/.github/workflows/update-flake.yml@v1
+    secrets: inherit
+```
+

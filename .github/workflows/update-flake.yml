@@ -1,0 +1,40 @@
+name: Update Flake Lock
+
+on:
+  workflow_call:
+    inputs:
+      pr-title:
+        description: Pull request title
+        type: string
+        default: "chore(nix): update flake.lock"
+      pr-labels:
+        description: Pull request labels
+        type: string
+        default: |
+          dependencies
+          nix
+      target-branch:
+        description: Target branch for the pull request
+        type: string
+        required: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install Nix
+        uses: DeterminateSystems/nix-installer-action@v22
+
+      - name: Update Flake Lock
+        uses: DeterminateSystems/update-flake-lock@v28
+        with:
+          pr-title: ${{ inputs.pr-title }}
+          pr-labels: ${{ inputs.pr-labels }}
+          target-branch: ${{ inputs.target-branch }}
